@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReadAloud 音読練習</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222536;
+    --border: #2e3148;
+    --accent: #6c8fff;
+    --accent2: #ff7eb3;
+    --gold: #ffd166;
+    --green: #06d6a0;
+    --text: #e8eaf0;
+    --text-muted: #7a7f9a;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-wrap: wrap; gap: 10px;
+  }
+  .logo { font-family: 'Lora', serif; font-size: 1.3rem; font-weight: 600; color: var(--accent); }
+  .logo span { color: var(--accent2); }
+  .nav-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .nav-tab {
+    padding: 7px 14px; border-radius: 8px; border: none;
+    background: transparent; color: var(--text-muted);
+    font-family: 'Noto Sans JP', sans-serif; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;
+  }
+  .nav-tab.active { background: var(--accent); color: #fff; }
+  .nav-tab:hover:not(.active) { background: var(--surface2); color: var(--text); }
+
+  .name-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px; background: var(--surface2); border-bottom: 1px solid var(--border); font-size: 0.88rem;
+  }
+  .name-bar label { color: var(--text-muted); white-space: nowrap; }
+  .name-bar input {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 12px; color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif; font-size: 0.88rem; width: 160px; transition: border-color 0.2s;
+  }
+  .name-bar input:focus { outline: none; border-color: var(--accent); }
+  .name-saved { color: var(--green); font-size: 0.8rem; display: none; }
+
+  .main { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 105px); }
+
+  .sidebar {
+    width: 240px; min-width: 180px;
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  @media (max-width: 600px) { .sidebar { width: 160px; min-width: 140px; } }
+  .sidebar-header {
+    padding: 12px 14px 10px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .sidebar-title { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .btn-icon {
+    width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--accent); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: all 0.2s;
+  }
+  .btn-icon:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .script-list { flex: 1; overflow-y: auto; padding: 8px 8px; }
+  .script-list::-webkit-scrollbar { width: 3px; }
+  .script-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .script-item {
+    padding: 9px 11px; border-radius: 9px; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.2s; margin-bottom: 5px;
+  }
+  .script-item:hover { background: var(--surface2); border-color: var(--border); }
+  .script-item.active { background: #6c8fff1a; border-color: var(--accent); }
+  .script-item-title { font-size: 0.82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .script-item-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 3px; }
+  .script-item-actions { display: none; gap: 4px; margin-top: 6px; }
+  .script-item:hover .script-item-actions, .script-item.active .script-item-actions { display: flex; }
+  .btn-tiny {
+    padding: 2px 7px; border-radius: 4px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-muted); font-size: 0.68rem; cursor: pointer; transition: all 0.15s;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .btn-tiny:hover { color: var(--text); border-color: var(--text-muted); }
+  .btn-tiny.danger:hover { color: var(--accent2); border-color: var(--accent2); }
+
+  .content { flex: 1; overflow-y: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+  @media (max-width: 600px) { .content { padding: 12px 10px; } }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .panel-header {
+    padding: 11px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-title { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; display: flex; align-items: center; gap: 6px; }
+  .panel-body { padding: 14px 16px; }
+
+  .script-display { font-family: 'Lora', serif; font-size: 1.05rem; line-height: 2.1; color: var(--text); }
+  .word { display: inline; border-radius: 4px; padding: 1px 2px; transition: background 0.15s; }
+  .word.current { background: #6c8fff33; border-bottom: 2px solid var(--accent); color: #fff; }
+  .word.done { color: var(--text-muted); }
+
+  .speed-control { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .speed-label { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
+  input[type="range"] { flex: 1; min-width: 80px; accent-color: var(--accent); }
+  .speed-val { font-size: 0.85rem; font-weight: 700; color: var(--accent); min-width: 52px; text-align: right; }
+
+  .btn-row { display: flex; gap: 7px; flex-wrap: wrap; }
+  .btn {
+    padding: 8px 16px; border-radius: 9px; border: none;
+    font-family: 'Noto Sans JP', sans-serif; font-size: 0.83rem; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #5577ee; transform: translateY(-1px); }
+  .btn-danger { background: var(--accent2); color: #fff; }
+  .btn-danger:hover { background: #ee6099; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { background: var(--surface2); }
+  .btn-green { background: var(--green); color: #0f1117; }
+  .btn-green:hover { background: #04c090; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+  .rec-status {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 13px; border-radius: 9px; background: var(--surface2); border: 1px solid var(--border); font-size: 0.83rem;
+  }
+  .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+  .rec-dot.active { background: var(--accent2); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .recording-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 12px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface2); margin-bottom: 6px;
+  }
+  .recording-info { flex: 1; min-width: 0; }
+  .recording-name { font-size: 0.82rem; font-weight: 500; }
+  .recording-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+  audio { height: 28px; flex: 1; min-width: 80px; }
+
+  .score-box {
+    display: flex; align-items: center; gap: 18px;
+    padding: 16px 18px; background: var(--surface2); border-radius: 12px; border: 1px solid var(--border);
+  }
+  .score-circle {
+    width: 68px; height: 68px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; font-weight: 700; font-family: 'Lora', serif;
+    border: 3px solid var(--accent); color: var(--accent); flex-shrink: 0;
+  }
+  .score-circle.high { border-color: var(--green); color: var(--green); }
+  .score-circle.mid { border-color: var(--gold); color: var(--gold); }
+  .score-circle.low { border-color: var(--accent2); color: var(--accent2); }
+  .score-comment { font-size: 0.88rem; line-height: 1.7; }
+  .score-loading { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 0.85rem; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* RANKING */
+  .ranking-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .ranking-tab {
+    padding: 5px 13px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .ranking-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .ranking-tab:hover:not(.active) { background: var(--surface2); color: var(--text); }
+  .ranking-list { display: flex; flex-direction: column; gap: 7px; }
+  .ranking-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2);
+  }
+  .ranking-item.top1 { border-color: var(--gold); background: #ffd16610; }
+  .ranking-item.top2 { border-color: #c0c0c0; background: #c0c0c010; }
+  .ranking-item.top3 { border-color: #cd7f32; background: #cd7f3210; }
+  .rank-medal { font-size: 1.3rem; min-width: 28px; text-align: center; }
+  .rank-num { font-size: 1rem; font-weight: 700; font-family: 'Lora', serif; min-width: 28px; text-align: center; color: var(--text-muted); }
+  .rank-info { flex: 1; }
+  .rank-name { font-size: 0.92rem; font-weight: 500; }
+  .rank-date { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+  .rank-score { font-size: 1.2rem; font-weight: 700; font-family: 'Lora', serif; }
+  .rank-score.high { color: var(--green); }
+  .rank-score.mid { color: var(--gold); }
+  .rank-score.low { color: var(--accent2); }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: #0009; z-index: 100; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; width: 92%; max-width: 480px; }
+  .modal-title { font-size: 1rem; font-weight: 700; margin-bottom: 14px; }
+  .form-group { margin-bottom: 12px; }
+  label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
+  input[type="text"], textarea, select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 11px; color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif; font-size: 0.86rem; transition: border-color 0.2s; resize: vertical;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+  textarea { min-height: 100px; }
+
+  .page { display: none; }
+  .page.active { display: flex; flex-direction: column; gap: 16px; }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; background: #6c8fff22; color: var(--accent); border: 1px solid #6c8fff44; }
+  .empty-state { text-align: center; padding: 32px 16px; color: var(--text-muted); }
+  .empty-icon { font-size: 2rem; margin-bottom: 8px; }
+  .empty-text { font-size: 0.85rem; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, push, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBNABJoPzj9howtovB7jvwmPs2kc5lSKGI",
+    authDomain: "readingrace-c1233.firebaseapp.com",
+    databaseURL: "https://readingrace-c1233-default-rtdb.firebaseio.com",
+    projectId: "readingrace-c1233",
+    storageBucket: "readingrace-c1233.firebasestorage.app",
+    messagingSenderId: "1054656386166",
+    appId: "1:1054656386166:web:d7d0970f34e5ace1763b57"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  window._fb = { db, ref, push, get };
+  window._fbReady = true;
+</script>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">Read<span>Aloud</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('practice', this)">🎙 練習</button>
+    <button class="nav-tab" onclick="showPage('ranking', this)">🏆 ランキング</button>
+    <button class="nav-tab" onclick="showPage('history', this)">📊 履歴</button>
+  </div>
+</header>
+
+<!-- NAME BAR -->
+<div class="name-bar">
+  <label>あなたの名前：</label>
+  <input type="text" id="playerName" placeholder="名前を入力してください" maxlength="20" oninput="saveName()">
+  <span class="name-saved" id="nameSaved">✓ 保存</span>
+</div>
+
+<div class="main">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">スクリプト</span>
+      <button class="btn-icon" onclick="openModal()" title="追加">＋</button>
+    </div>
+    <div class="script-list" id="scriptList"></div>
+  </aside>
+
+  <main class="content">
+
+    <!-- PRACTICE -->
+    <div class="page active" id="page-practice">
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📖 スクリプト</div>
+          <span class="tag" id="scriptTagLabel">選択してください</span>
+        </div>
+        <div class="panel-body">
+          <div class="script-display" id="scriptDisplay">
+            <div class="empty-state">
+              <div class="empty-icon">📝</div>
+              <div class="empty-text">左のリストから<br>スクリプトを選んでください</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">⚡ 読む速さ</div></div>
+        <div class="panel-body" style="display:flex;flex-direction:column;gap:12px;">
+          <div class="speed-control">
+            <span class="speed-label">WPM（1分あたりの単語数）</span>
+            <input type="range" id="wpmSlider" min="50" max="200" value="100" oninput="updateWpm(this.value)">
+            <span class="speed-val" id="wpmVal">100 wpm</span>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btnStart" onclick="startHighlight()" disabled>▶ 開始</button>
+            <button class="btn btn-outline" id="btnStop" onclick="stopHighlight()" disabled>⏹ 停止</button>
+            <button class="btn btn-outline" onclick="resetHighlight()">↺ リセット</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🎙 録音</div></div>
+        <div class="panel-body" style="display:flex;flex-direction:column;gap:11px;">
+          <div class="rec-status">
+            <div class="rec-dot" id="recDot"></div>
+            <span id="recStatusText">待機中</span>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-danger" id="btnRec" onclick="startRecording()" disabled>● 録音開始</button>
+            <button class="btn btn-outline" id="btnStop2" onclick="stopRecording()" disabled>⏹ 停止</button>
+          </div>
+          <div id="recordingsList"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🤖 AI 発音チェック</div></div>
+        <div class="panel-body" style="display:flex;flex-direction:column;gap:11px;">
+          <p style="font-size:0.8rem;color:var(--text-muted);">録音後にAIが発音・流暢さを評価します。スコアはランキングに登録されます！</p>
+          <div class="btn-row">
+            <button class="btn btn-green" id="btnAI" onclick="runAICheck()" disabled>✨ AIチェック実行</button>
+          </div>
+          <div id="aiResult"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RANKING -->
+    <div class="page" id="page-ranking">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🏆 ランキング（上位10名）</div>
+          <button class="btn btn-outline" style="padding:5px 11px;font-size:0.76rem;" onclick="loadRanking()">🔄 更新</button>
+        </div>
+        <div class="panel-body">
+          <div class="ranking-tabs" id="rankingTabs"></div>
+          <div class="ranking-list" id="rankingList">
+            <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">読み込み中...</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="page" id="page-history">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📊 自分の練習履歴</div>
+          <button class="btn-tiny danger" onclick="clearHistory()">全削除</button>
+        </div>
+        <div class="panel-body" id="historyBody"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modalTitle">スクリプトを追加</div>
+    <div class="form-group">
+      <label>タイトル</label>
+      <input type="text" id="inputTitle" placeholder="例: Lesson 1 - Introduction">
+    </div>
+    <div class="form-group">
+      <label>英文スクリプト</label>
+      <textarea id="inputScript" placeholder="英文を貼り付けてください"></textarea>
+    </div>
+    <div class="form-group">
+      <label>難易度（任意）</label>
+      <select id="inputLevel">
+        <option value="">なし</option>
+        <option value="初級">初級</option>
+        <option value="中級">中級</option>
+        <option value="上級">上級</option>
+      </select>
+    </div>
+    <div class="btn-row" style="justify-content:flex-end;margin-top:4px;">
+      <button class="btn btn-outline" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveScript()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let scripts = JSON.parse(localStorage.getItem('readScripts') || '[]');
+let history = JSON.parse(localStorage.getItem('readHistory') || '[]');
+let activeScript = null, editingId = null;
+let words = [], currentWordIdx = 0, hlInterval = null, wpm = 100;
+let mediaRecorder = null, audioChunks = [], recordings = [], selectedRecordingUrl = null;
+let activeRankingScript = null, rankingScriptMap = {};
+
+// ── NAME ──
+function saveName() {
+  localStorage.setItem('playerName', document.getElementById('playerName').value.trim());
+  const el = document.getElementById('nameSaved');
+  el.style.display = 'inline';
+  setTimeout(() => el.style.display = 'none', 1500);
+}
+function getPlayerName() { return localStorage.getItem('playerName') || ''; }
+document.getElementById('playerName').value = getPlayerName();
+
+// ── SCRIPTS ──
+function saveScripts() { localStorage.setItem('readScripts', JSON.stringify(scripts)); }
+function saveHistory() { localStorage.setItem('readHistory', JSON.stringify(history)); }
+function wc(t) { return t.trim().split(/\s+/).filter(Boolean).length; }
+
+function renderScriptList() {
+  const el = document.getElementById('scriptList');
+  if (!scripts.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:18px 8px;"><div class="empty-icon" style="font-size:1.6rem;">📝</div><div class="empty-text" style="font-size:0.75rem;">スクリプトなし</div></div>';
+    return;
+  }
+  el.innerHTML = scripts.map(s => `
+    <div class="script-item ${activeScript?.id===s.id?'active':''}" onclick="selectScript('${s.id}')">
+      <div class="script-item-title">${s.title}</div>
+      <div class="script-item-meta">${s.level?`<span class="tag">${s.level}</span> `:''}${wc(s.text)}語</div>
+      <div class="script-item-actions">
+        <button class="btn-tiny" onclick="event.stopPropagation();openModal('${s.id}')">編集</button>
+        <button class="btn-tiny danger" onclick="event.stopPropagation();deleteScript('${s.id}')">削除</button>
+      </div>
+    </div>`).join('');
+}
+
+function selectScript(id) {
+  activeScript = scripts.find(s => s.id === id);
+  if (!activeScript) return;
+  stopHighlight(); resetHighlight();
+  recordings = []; selectedRecordingUrl = null;
+  renderScriptList(); renderScriptDisplay();
+  document.getElementById('scriptTagLabel').textContent = activeScript.level || activeScript.title;
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnRec').disabled = false;
+  document.getElementById('btnAI').disabled = true;
+  document.getElementById('aiResult').innerHTML = '';
+  document.getElementById('recordingsList').innerHTML = '';
+}
+
+function renderScriptDisplay() {
+  if (!activeScript) return;
+  words = activeScript.text.trim().split(/(\s+)/).filter(s => s.trim());
+  currentWordIdx = 0;
+  document.getElementById('scriptDisplay').innerHTML =
+    words.map((w,i) => `<span class="word" id="w${i}">${w} </span>`).join('');
+}
+
+function openModal(id) {
+  editingId = id || null;
+  document.getElementById('modalTitle').textContent = id ? 'スクリプトを編集' : 'スクリプトを追加';
+  if (id) {
+    const s = scripts.find(x => x.id === id);
+    document.getElementById('inputTitle').value = s.title;
+    document.getElementById('inputScript').value = s.text;
+    document.getElementById('inputLevel').value = s.level || '';
+  } else {
+    document.getElementById('inputTitle').value = '';
+    document.getElementById('inputScript').value = '';
+    document.getElementById('inputLevel').value = '';
+  }
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modalOverlay'))
+    document.getElementById('modalOverlay').classList.remove('open');
+}
+function saveScript() {
+  const title = document.getElementById('inputTitle').value.trim();
+  const text = document.getElementById('inputScript').value.trim();
+  const level = document.getElementById('inputLevel').value;
+  if (!title || !text) { alert('タイトルとスクリプトを入力してください'); return; }
+  if (editingId) {
+    const idx = scripts.findIndex(s => s.id === editingId);
+    scripts[idx] = { ...scripts[idx], title, text, level };
+    if (activeScript?.id === editingId) selectScript(editingId);
+  } else {
+    scripts.push({ id: Date.now().toString(), title, text, level, createdAt: Date.now() });
+  }
+  saveScripts(); renderScriptList(); closeModal();
+}
+function deleteScript(id) {
+  if (!confirm('削除しますか？')) return;
+  scripts = scripts.filter(s => s.id !== id);
+  if (activeScript?.id === id) {
+    activeScript = null;
+    document.getElementById('scriptDisplay').innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">スクリプトを選んでください</div></div>';
+    ['btnStart','btnRec'].forEach(b => document.getElementById(b).disabled = true);
+  }
+  saveScripts(); renderScriptList();
+}
+
+// ── HIGHLIGHT ──
+function updateWpm(v) { wpm = parseInt(v); document.getElementById('wpmVal').textContent = v + ' wpm'; }
+function startHighlight() {
+  if (!activeScript) return;
+  if (currentWordIdx >= words.length) resetHighlight();
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnStop').disabled = false;
+  const ms = (60 / wpm) * 1000;
+  hlInterval = setInterval(() => {
+    if (currentWordIdx > 0) {
+      const prev = document.getElementById('w'+(currentWordIdx-1));
+      if (prev) { prev.classList.remove('current'); prev.classList.add('done'); }
+    }
+    if (currentWordIdx >= words.length) { stopHighlight(); return; }
+    const cur = document.getElementById('w'+currentWordIdx);
+    if (cur) { cur.classList.add('current'); cur.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+    currentWordIdx++;
+  }, ms);
+}
+function stopHighlight() {
+  if (hlInterval) clearInterval(hlInterval); hlInterval = null;
+  document.getElementById('btnStart').disabled = !activeScript;
+  document.getElementById('btnStop').disabled = true;
+}
+function resetHighlight() {
+  stopHighlight(); currentWordIdx = 0;
+  document.querySelectorAll('.word').forEach(el => el.classList.remove('current','done'));
+}
+
+// ── RECORDING ──
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      const url = URL.createObjectURL(blob);
+      recordings.push({ id: Date.now().toString(), blob, url, name: `録音 ${recordings.length+1}`, date: new Date().toLocaleString('ja-JP') });
+      selectedRecordingUrl = url;
+      renderRecordings();
+      document.getElementById('btnAI').disabled = false;
+      stream.getTracks().forEach(t => t.stop());
+    };
+    mediaRecorder.start();
+    document.getElementById('recDot').classList.add('active');
+    document.getElementById('recStatusText').textContent = '録音中...';
+    document.getElementById('btnRec').disabled = true;
+    document.getElementById('btnStop2').disabled = false;
+  } catch(e) { alert('マイクのアクセスを許可してください'); }
+}
+function stopRecording() {
+  if (mediaRecorder?.state !== 'inactive') {
+    mediaRecorder.stop();
+    document.getElementById('recDot').classList.remove('active');
+    document.getElementById('recStatusText').textContent = '録音完了！';
+    document.getElementById('btnRec').disabled = false;
+    document.getElementById('btnStop2').disabled = true;
+  }
+}
+function renderRecordings() {
+  const el = document.getElementById('recordingsList');
+  if (!recordings.length) { el.innerHTML=''; return; }
+  el.innerHTML = recordings.map(r => `
+    <div class="recording-item">
+      <div class="recording-info">
+        <div class="recording-name">${r.name}</div>
+        <div class="recording-meta">${r.date}</div>
+      </div>
+      <audio src="${r.url}" controls></audio>
+      <button class="btn-tiny" onclick="selectRec('${r.id}')" style="${selectedRecordingUrl===r.url?'border-color:var(--accent);color:var(--accent);':''}">✓選択</button>
+      <button class="btn-tiny danger" onclick="deleteRec('${r.id}')">削除</button>
+    </div>`).join('');
+}
+function selectRec(id) { const r=recordings.find(x=>x.id===id); if(r){selectedRecordingUrl=r.url;renderRecordings();} }
+function deleteRec(id) {
+  recordings=recordings.filter(r=>r.id!==id);
+  if(!recordings.length){selectedRecordingUrl=null;document.getElementById('btnAI').disabled=true;}
+  else selectedRecordingUrl=recordings[recordings.length-1].url;
+  renderRecordings();
+}
+
+// ── AI CHECK ──
+async function runAICheck() {
+  const name = getPlayerName();
+  if (!name) { alert('先に名前を入力してください！'); document.getElementById('playerName').focus(); return; }
+  if (!activeScript || !selectedRecordingUrl) return;
+
+  const resultEl = document.getElementById('aiResult');
+  resultEl.innerHTML = `<div class="score-loading"><div class="spinner"></div>AIが評価中です...</div>`;
+  document.getElementById('btnAI').disabled = true;
+
+  const prompt = `あなたは英語の発音・音読を評価する先生です。
+生徒が以下の英文スクリプトを音読しました。
+スクリプト：「${activeScript.text}」
+
+以下の観点で評価してください：発音の正確さ、リズム・イントネーション、流暢さ、速さの適切さ。
+
+100点満点で点数をつけ、生徒向けに日本語で励みになる短いコメント（2〜3文）を書いてください。
+
+回答はJSONのみで返してください。形式：{"score": 数値, "comment": "コメント文"}`;
+
+  try {
+    const res = await fetch("https://divine-paper-62f3.moritoyuki19870128.workers.dev", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt })
+    });
+    const data = await res.json();
+    // エラーレスポンスの確認
+    if (data.error) throw new Error(data.error);
+    const raw = data.text || '';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('JSONが見つかりません: ' + raw);
+    const parsed = JSON.parse(match[0]);
+    const { score, comment } = parsed;
+    const cls = score>=80?'high':score>=60?'mid':'low';
+
+    resultEl.innerHTML = `
+      <div class="score-box">
+        <div class="score-circle ${cls}">${score}</div>
+        <div class="score-comment">${comment}</div>
+      </div>`;
+
+    history.unshift({ id: Date.now().toString(), scriptTitle: activeScript.title, score, comment, name, date: new Date().toLocaleString('ja-JP') });
+    saveHistory();
+
+    await saveToFirebase(name, activeScript.id, activeScript.title, score);
+
+  } catch(e) {
+    resultEl.innerHTML = `<div style="color:var(--accent2);font-size:0.83rem;">エラー：${e.message}</div>`;
+    console.error(e);
+  }
+  document.getElementById('btnAI').disabled = false;
+}
+
+async function saveToFirebase(name, scriptId, scriptTitle, score) {
+  if (!window._fbReady) return;
+  try {
+    const { db, ref, push } = window._fb;
+    const safeId = scriptId.replace(/[.#$[\]]/g,'_');
+    await push(ref(db, `rankings/${safeId}`), {
+      name, scriptTitle, score,
+      date: new Date().toLocaleString('ja-JP'),
+      ts: Date.now()
+    });
+  } catch(e) { console.error('Firebase保存エラー:', e); }
+}
+
+// ── RANKING ──
+async function loadRanking() {
+  if (!window._fbReady) { setTimeout(loadRanking, 600); return; }
+  const tabsEl = document.getElementById('rankingTabs');
+  const listEl = document.getElementById('rankingList');
+  listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">読み込み中...</div></div>';
+
+  try {
+    const { db, ref, get } = window._fb;
+    const snap = await get(ref(db, 'rankings'));
+
+    if (!snap.exists()) {
+      tabsEl.innerHTML = '';
+      listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-text">まだデータがありません。<br>AIチェックを実行すると登録されます！</div></div>';
+      return;
+    }
+
+    rankingScriptMap = {};
+    Object.entries(snap.val()).forEach(([scriptId, entries]) => {
+      Object.values(entries).forEach(entry => {
+        if (!rankingScriptMap[scriptId]) rankingScriptMap[scriptId] = { title: entry.scriptTitle, entries: [] };
+        rankingScriptMap[scriptId].entries.push(entry);
+      });
+    });
+    Object.values(rankingScriptMap).forEach(s => {
+      s.entries.sort((a,b) => b.score-a.score);
+      s.entries = s.entries.slice(0,10);
+    });
+
+    const scriptIds = Object.keys(rankingScriptMap);
+    if (!activeRankingScript || !rankingScriptMap[activeRankingScript]) activeRankingScript = scriptIds[0];
+
+    tabsEl.innerHTML = scriptIds.map(id =>
+      `<button class="ranking-tab ${id===activeRankingScript?'active':''}" onclick="switchRankingTab('${id}',this)">${rankingScriptMap[id].title}</button>`
+    ).join('');
+
+    renderRankingList(rankingScriptMap[activeRankingScript].entries);
+  } catch(e) {
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">読み込みに失敗しました</div></div>';
+    console.error(e);
+  }
+}
+
+function switchRankingTab(id, btn) {
+  activeRankingScript = id;
+  document.querySelectorAll('.ranking-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderRankingList(rankingScriptMap[id]?.entries || []);
+}
+
+function renderRankingList(entries) {
+  const el = document.getElementById('rankingList');
+  if (!entries?.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-text">まだデータがありません</div></div>';
+    return;
+  }
+  const medals = ['🥇','🥈','🥉'];
+  const rankCls = ['top1','top2','top3'];
+  el.innerHTML = entries.map((e,i) => {
+    const scoreCls = e.score>=80?'high':e.score>=60?'mid':'low';
+    return `
+      <div class="ranking-item ${rankCls[i]||''}">
+        ${i<3 ? `<div class="rank-medal">${medals[i]}</div>` : `<div class="rank-num">${i+1}</div>`}
+        <div class="rank-info">
+          <div class="rank-name">${e.name}</div>
+          <div class="rank-date">${e.date}</div>
+        </div>
+        <div class="rank-score ${scoreCls}">${e.score}<span style="font-size:0.68rem;font-weight:400;color:var(--text-muted)">点</span></div>
+      </div>`;
+  }).join('');
+}
+
+// ── HISTORY ──
+function renderHistory() {
+  const el = document.getElementById('historyBody');
+  if (!history.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📉</div><div class="empty-text">まだ履歴がありません</div></div>';
+    return;
+  }
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+    <thead><tr>
+      <th style="text-align:left;padding:7px 10px;color:var(--text-muted);border-bottom:1px solid var(--border)">日時</th>
+      <th style="text-align:left;padding:7px 10px;color:var(--text-muted);border-bottom:1px solid var(--border)">スクリプト</th>
+      <th style="text-align:left;padding:7px 10px;color:var(--text-muted);border-bottom:1px solid var(--border)">スコア</th>
+    </tr></thead>
+    <tbody>${history.map(h => {
+      const c = h.score>=80?'var(--green)':h.score>=60?'var(--gold)':'var(--accent2)';
+      return `<tr>
+        <td style="padding:7px 10px;border-bottom:1px solid #2e314822;color:var(--text-muted);white-space:nowrap;font-size:0.75rem">${h.date}</td>
+        <td style="padding:7px 10px;border-bottom:1px solid #2e314822">${h.scriptTitle}</td>
+        <td style="padding:7px 10px;border-bottom:1px solid #2e314822;font-weight:700;color:${c}">${h.score}点</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+function clearHistory() {
+  if (!confirm('履歴を全て削除しますか？')) return;
+  history=[]; saveHistory(); renderHistory();
+}
+
+// ── NAVIGATION ──
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  if (name==='history') renderHistory();
+  if (name==='ranking') loadRanking();
+}
+
+// ── INIT ──
+(function init() {
+  if (!scripts.length) {
+    scripts = [
+      { id:'1', title:'Sample - Self Introduction', level:'初級', text:'Hello, my name is Yuki. I am an English teacher at a high school in Japan. I enjoy reading books and teaching students every day. Nice to meet you.', createdAt: Date.now() },
+      { id:'2', title:'Sample - Climate Change', level:'中級', text:'Climate change is one of the most serious issues facing our planet today. Rising temperatures, extreme weather events, and melting ice caps are just a few of the consequences. We must take action now to protect our environment for future generations.', createdAt: Date.now() }
+    ];
+    saveScripts();
+  }
+  renderScriptList();
+  renderHistory();
+})();
+</script>
+</body>
+</html>
